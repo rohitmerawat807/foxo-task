@@ -19,7 +19,11 @@ export function ProductDetailsView({ product }: ProductDetailsViewProps) {
   const specs = getSpecs(product);
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      // On iOS 26 the content sits under the (Liquid Glass) header; this insets it below the
+      // header so the top of the gallery isn't hidden. No effect on Android or web.
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={styles.content}>
       <Gallery product={product} />
 
       <View style={styles.body}>

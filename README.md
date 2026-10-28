@@ -2,7 +2,7 @@
 
 A React Native + Expo app that lists products from the [DummyJSON API](https://dummyjson.com/docs/products), with pagination, search, a product details screen, and handling for the errors a real network and real data produce. A built-in **Simulate** tab triggers each failure on purpose, so you can see how the app copes.
 
-Built with Expo SDK 57, React Native 0.86, Expo Router, and TypeScript in strict mode.
+Built with Expo SDK 58, React Native 0.88, Expo Router, and TypeScript in strict mode.
 
 ## Getting started
 
