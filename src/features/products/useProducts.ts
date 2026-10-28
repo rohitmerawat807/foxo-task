@@ -33,8 +33,11 @@ export function useProducts() {
   useEffect(() => {
     const controller = new AbortController();
 
+    // Every handler checks `aborted`: a response that was already arriving when the request
+    // was cancelled (retry, unmount) must not overwrite newer state.
     fetchProducts({ limit: PAGE_SIZE, skip: 0 }, controller.signal)
       .then(({ products, total, nextSkip }) => {
+        if (controller.signal.aborted) return;
         setState(
           products.length > 0
             ? { status: 'success', products, total, nextSkip, loadMore: { status: 'idle' } }
@@ -42,10 +45,8 @@ export function useProducts() {
         );
       })
       .catch((error: unknown) => {
-        // Unmounted or replaced by a retry; nothing to show.
-        if (!controller.signal.aborted) {
-          setState({ status: 'error', error: toAppError(error) });
-        }
+        if (controller.signal.aborted) return;
+        setState({ status: 'error', error: toAppError(error) });
       });
 
     return () => controller.abort();
@@ -64,6 +65,7 @@ export function useProducts() {
 
     fetchProducts({ limit: PAGE_SIZE, skip: state.nextSkip }, controller.signal)
       .then(({ products, total, nextSkip }) => {
+        if (controller.signal.aborted) return;
         setState((prev) =>
           prev.status === 'success'
             ? {
@@ -77,13 +79,12 @@ export function useProducts() {
         );
       })
       .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setState((prev) =>
-            prev.status === 'success'
-              ? { ...prev, loadMore: { status: 'error', error: toAppError(error) } }
-              : prev,
-          );
-        }
+        if (controller.signal.aborted) return;
+        setState((prev) =>
+          prev.status === 'success'
+            ? { ...prev, loadMore: { status: 'error', error: toAppError(error) } }
+            : prev,
+        );
       })
       .finally(() => {
         if (loadMoreRequest.current === controller) {
