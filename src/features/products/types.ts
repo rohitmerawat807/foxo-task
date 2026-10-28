@@ -78,4 +78,6 @@ export type ProductsPage = {
 export type ProductsQuery = {
   limit?: number;
   skip?: number;
+  /** Full-text search; empty means "all products". */
+  search?: string;
 };

@@ -1,5 +1,6 @@
 import { FlatList, StyleSheet } from 'react-native';
 import { ListFooter } from '@/components/global/ListFooter';
+import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errorUtils';
@@ -11,6 +12,9 @@ type ProductListProps = {
   products: ProductSummary[];
   hasMore: boolean;
   loadMore: LoadMoreState;
+  refreshing: boolean;
+  /** Shown above the list when a pull-to-refresh failed. */
+  refreshError?: string;
   onEndReached: () => void;
   onRetryLoadMore: () => void;
   onRefresh: () => void;
@@ -26,6 +30,8 @@ export function ProductList({
   products,
   hasMore,
   loadMore,
+  refreshing,
+  refreshError,
   onEndReached,
   onRetryLoadMore,
   onRefresh,
@@ -45,9 +51,18 @@ export function ProductList({
       initialNumToRender={8}
       maxToRenderPerBatch={8}
       windowSize={7}
-      // Reloads from page 1; the screen shows its own loading state meanwhile.
-      refreshing={false}
+      refreshing={refreshing}
       onRefresh={onRefresh}
+      ListHeaderComponent={
+        refreshError ? (
+          <ThemedText type="small" themeColor="textSecondary" style={styles.notice}>
+            {refreshError}
+          </ThemedText>
+        ) : null
+      }
+      // Typing in the search bar shouldn't fight with taps and scrolls on the list.
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       ListFooterComponent={
         <Footer hasMore={hasMore} loadMore={loadMore} onRetry={onRetryLoadMore} />
       }
@@ -83,6 +98,9 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: Spacing.four,
     paddingBottom: BottomTabInset + Spacing.three,
+  },
+  notice: {
+    paddingVertical: Spacing.two,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

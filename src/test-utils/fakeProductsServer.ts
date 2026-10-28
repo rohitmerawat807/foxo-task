@@ -11,6 +11,8 @@ type FakeServerOptions = {
   latencyMs?: (requestIndex: number) => number;
   /** Chance (0–1) that a request fails like an unreachable host. */
   failRate?: number;
+  /** Fails exactly the requests it returns true for; overrides `failRate`. */
+  shouldFail?: (requestIndex: number) => boolean;
   /** Chance (0–1) that a product loses one of its required fields. */
   corruptRate?: number;
   /** Respond even after the request was aborted, as if the response was already in flight. */
@@ -71,6 +73,7 @@ export function installFakeProductsServer(options: FakeServerOptions) {
     total,
     latencyMs = () => 0,
     failRate = 0,
+    shouldFail,
     corruptRate = 0,
     ignoreAbort = false,
     seed = 1,
@@ -88,8 +91,13 @@ export function installFakeProductsServer(options: FakeServerOptions) {
   const buildBody = (url: URL, requestIndex: number) => {
     const limit = Number(url.searchParams.get('limit'));
     const skip = Number(url.searchParams.get('skip'));
+    // `/products/search?q=` matches "Product <id>" titles, so q=1 finds 1, 10–19, 100…
+    const query = url.pathname.endsWith('/search') ? url.searchParams.get('q') : null;
+    const matchingIds = Array.from({ length: total }, (_, i) => i + 1).filter(
+      (id) => query === null || `Product ${id}`.toLowerCase().includes(query.toLowerCase()),
+    );
     const products: Partial<Product>[] = [];
-    for (let id = skip + 1; id <= Math.min(skip + limit, total); id++) {
+    for (const id of matchingIds.slice(skip, skip + limit)) {
       const product: Partial<Product> = makeProduct(id, requestIndex);
       if (random() < corruptRate) {
         delete product[REQUIRED_FIELDS[Math.floor(random() * REQUIRED_FIELDS.length)]];
@@ -97,7 +105,7 @@ export function installFakeProductsServer(options: FakeServerOptions) {
       }
       products.push(product);
     }
-    return { products, total, skip, limit: products.length };
+    return { products, total: matchingIds.length, skip, limit: products.length };
   };
 
   const fetchMock = jest.fn((input: string, init?: RequestInit) => {
@@ -117,7 +125,7 @@ export function installFakeProductsServer(options: FakeServerOptions) {
         setTimeout(() => {
           if (settled) return;
           settle();
-          if (random() < failRate) {
+          if (shouldFail ? shouldFail(requestIndex) : random() < failRate) {
             stats.failures++;
             reject(new TypeError('Network request failed'));
             return;

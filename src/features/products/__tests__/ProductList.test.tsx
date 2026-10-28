@@ -11,6 +11,7 @@ function renderList(products: ProductSummary[]) {
       products={products}
       hasMore
       loadMore={{ status: 'idle' }}
+      refreshing={false}
       onEndReached={noop}
       onRetryLoadMore={noop}
       onRefresh={noop}

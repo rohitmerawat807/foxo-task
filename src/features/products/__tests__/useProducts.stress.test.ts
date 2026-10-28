@@ -1,6 +1,14 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import { installFakeProductsServer } from '@/test-utils/fakeProductsServer';
+import {
+  loadEverything,
+  randomLatency,
+  range,
+  sleep,
+  successState,
+  waitForSettled,
+} from '@/test-utils/productsHookHelpers';
 
 import { useProducts } from '../useProducts';
 
@@ -10,56 +18,6 @@ jest.mock('expo-network', () => ({
 jest.mock('@/services/errorReporter', () => ({ reportError: jest.fn() }));
 
 jest.setTimeout(60_000);
-
-type HookResult = { current: ReturnType<typeof useProducts> };
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const randomLatency = (max: number) => () => Math.floor(Math.random() * max);
-
-function successState(result: HookResult) {
-  const { state } = result.current;
-  if (state.status !== 'success') {
-    throw new Error(`Expected success, got ${state.status}`);
-  }
-  return state;
-}
-
-async function waitForSettled(result: HookResult) {
-  await waitFor(
-    () => {
-      const { state } = result.current;
-      expect(state.status).not.toBe('loading');
-      if (state.status === 'success') {
-        expect(state.loadMore.status).not.toBe('loading');
-      }
-    },
-    { interval: 5, timeout: 15_000 },
-  );
-}
-
-/** Scrolls to the end, retrying whatever fails, like a persistent user would. */
-async function loadEverything(result: HookResult) {
-  await waitForSettled(result);
-  while (result.current.state.status === 'error') {
-    await act(async () => result.current.retry());
-    await waitForSettled(result);
-  }
-  for (let guard = 0; guard < 10_000; guard++) {
-    const state = successState(result);
-    if (state.loadMore.status === 'error') {
-      await act(async () => result.current.retryLoadMore());
-    } else if (state.nextSkip < state.total) {
-      await act(async () => result.current.loadMore());
-    } else {
-      return state;
-    }
-    await waitForSettled(result);
-  }
-  throw new Error('Pagination did not finish');
-}
-
-const range = (from: number, to: number) =>
-  Array.from({ length: to - from + 1 }, (_, i) => from + i);
 
 describe('useProducts under stress', () => {
   it('paginates through 2,000 products with no duplicates or gaps', async () => {

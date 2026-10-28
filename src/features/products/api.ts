@@ -58,10 +58,13 @@ export function toProductSummary(value: unknown): ProductSummary | null {
 }
 
 export async function fetchProducts(
-  { limit = DEFAULT_LIMIT, skip = 0 }: ProductsQuery = {},
+  { limit = DEFAULT_LIMIT, skip = 0, search = '' }: ProductsQuery = {},
   signal?: AbortSignal,
 ): Promise<ProductsPage> {
-  const data = await apiGet<unknown>('/products', { query: { limit, skip }, signal });
+  // Search results page with `limit`/`skip` exactly like the full list.
+  const data = search
+    ? await apiGet<unknown>('/products/search', { query: { q: search, limit, skip }, signal })
+    : await apiGet<unknown>('/products', { query: { limit, skip }, signal });
 
   if (!isProductsResponse(data)) {
     throw new AppError('parse', 'Unexpected products response shape');

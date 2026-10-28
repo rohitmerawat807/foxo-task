@@ -10,6 +10,9 @@ const PAGE_SIZE = 20;
 export type LoadMoreState =
   { status: 'idle' } | { status: 'loading' } | { status: 'error'; error: AppError };
 
+export type RefreshState =
+  { status: 'idle' } | { status: 'refreshing' } | { status: 'error'; error: AppError };
+
 export type ProductsState =
   | { status: 'loading' }
   | {
@@ -18,6 +21,7 @@ export type ProductsState =
       total: number;
       nextSkip: number;
       loadMore: LoadMoreState;
+      refresh: RefreshState;
     }
   | { status: 'empty' }
   | { status: 'error'; error: AppError };
@@ -35,20 +39,29 @@ function appendUnique(existing: ProductSummary[], incoming: ProductSummary[]) {
   return result;
 }
 
-export function useProducts() {
+/** Paginated products, optionally filtered by `search`. */
+export function useProducts(search = '') {
   const [state, setState] = useState<ProductsState>({ status: 'loading' });
-  // Bumping this re-runs the first-page fetch.
+  // Bumping this re-runs the first-page fetch (retry and refresh).
   const [requestId, setRequestId] = useState(0);
   // The in-flight next-page request. Blocks duplicate `onEndReached` calls.
   const loadMoreRequest = useRef<AbortController | null>(null);
 
-  // First page
+  // A new search starts from scratch. Updating state during render (instead of in the effect)
+  // avoids briefly showing the previous search's results.
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setState({ status: 'loading' });
+  }
+
+  // First page: on mount, new search, retry and refresh.
   useEffect(() => {
     const controller = new AbortController();
 
     // Every handler checks `aborted`: a response that was already arriving when the request
-    // was cancelled (retry, unmount) must not overwrite newer state.
-    fetchProducts({ limit: PAGE_SIZE, skip: 0 }, controller.signal)
+    // was cancelled must not overwrite newer state.
+    fetchProducts({ limit: PAGE_SIZE, skip: 0, search }, controller.signal)
       .then(({ products, total, nextSkip }) => {
         if (controller.signal.aborted) return;
         setState(
@@ -59,30 +72,38 @@ export function useProducts() {
                 total,
                 nextSkip,
                 loadMore: { status: 'idle' },
+                refresh: { status: 'idle' },
               }
             : { status: 'empty' },
         );
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
-        setState({ status: 'error', error: toAppError(error) });
+        // A failed refresh keeps the list that is already on screen.
+        setState((prev) =>
+          prev.status === 'success'
+            ? { ...prev, refresh: { status: 'error', error: toAppError(error) } }
+            : { status: 'error', error: toAppError(error) },
+        );
       });
 
-    return () => controller.abort();
-  }, [requestId]);
-
-  // Cancel a pending next-page request on unmount.
-  useEffect(() => () => loadMoreRequest.current?.abort(), []);
+    return () => {
+      controller.abort();
+      // A next page of the old search/list must never be appended to the new one.
+      loadMoreRequest.current?.abort();
+      loadMoreRequest.current = null;
+    };
+  }, [search, requestId]);
 
   const fetchNextPage = () => {
     if (state.status !== 'success' || state.nextSkip >= state.total) return;
-    if (loadMoreRequest.current) return;
+    if (state.refresh.status === 'refreshing' || loadMoreRequest.current) return;
 
     const controller = new AbortController();
     loadMoreRequest.current = controller;
     setState({ ...state, loadMore: { status: 'loading' } });
 
-    fetchProducts({ limit: PAGE_SIZE, skip: state.nextSkip }, controller.signal)
+    fetchProducts({ limit: PAGE_SIZE, skip: state.nextSkip, search }, controller.signal)
       .then(({ products, total, nextSkip }) => {
         if (controller.signal.aborted) return;
         setState((prev) =>
@@ -119,13 +140,21 @@ export function useProducts() {
     }
   };
 
-  /** Starts over from the first page. */
+  /** Pull-to-refresh: reloads page 1 while the current list stays visible. */
+  const refresh = () => {
+    if (state.status !== 'success') {
+      retry();
+      return;
+    }
+    setState({ ...state, loadMore: { status: 'idle' }, refresh: { status: 'refreshing' } });
+    setRequestId((id) => id + 1);
+  };
+
+  /** Starts over from the first page, showing the full-screen loading state. */
   const retry = () => {
-    loadMoreRequest.current?.abort();
-    loadMoreRequest.current = null;
     setState({ status: 'loading' });
     setRequestId((id) => id + 1);
   };
 
-  return { state, loadMore, retryLoadMore: fetchNextPage, retry };
+  return { state, loadMore, retryLoadMore: fetchNextPage, refresh, retry };
 }
