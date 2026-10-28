@@ -58,7 +58,7 @@ export function ProductList({
           <ThemedText type="small" themeColor="textSecondary" style={styles.notice}>
             {refreshError}
           </ThemedText>
-        ) : null
+        ) : undefined
       }
       // Typing in the search bar shouldn't fight with taps and scrolls on the list.
       keyboardShouldPersistTaps="handled"
