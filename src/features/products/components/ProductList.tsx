@@ -45,7 +45,7 @@ export function ProductList({
       onEndReached={onEndReached}
       // Start the next page a full screen early so fast scrolling rarely hits the bottom.
       onEndReachedThreshold={1}
-      // Rows have different heights (wrapped titles, optional description), so no
+      // Rows can differ in height (the subtitle line is left out when there's no data), so no
       // `getItemLayout`. Instead keep the rendered window small: fewer mounted rows means fewer
       // decoded images in memory on long lists.
       initialNumToRender={8}

@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -56,7 +57,7 @@ export default function SimulateScreen() {
 
           <Section
             title="API response"
-            hint="Applies to the next requests. Pull to refresh or scroll on Home to see it.">
+            hint="Applies to the next requests, on Home and on product details. Pull to refresh or open a product to see it.">
             {API_OPTIONS.map((option) => (
               <Option
                 key={option.value}
@@ -66,6 +67,26 @@ export default function SimulateScreen() {
                 onPress={() => selectSimulation(option.value)}
               />
             ))}
+          </Section>
+
+          <Section
+            title="Product details links"
+            hint="Opens the details screen with data it has to reject or can't find.">
+            <Option
+              label="Product that doesn't exist"
+              description="Valid id, but the server answers 404."
+              onPress={() => router.push('/product/999999')}
+            />
+            <Option
+              label="Malformed product link"
+              description="Not a number; rejected without a request."
+              onPress={() => router.push('/product/abc')}
+            />
+            <Option
+              label="Existing product"
+              description="Product 1, with whatever API simulation is selected above."
+              onPress={() => router.push('/product/1')}
+            />
           </Section>
 
           <Section

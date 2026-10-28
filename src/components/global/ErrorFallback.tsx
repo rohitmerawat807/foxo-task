@@ -18,7 +18,7 @@ export function ErrorFallback({ error, onRetry }: ErrorFallbackProps) {
         <ErrorState
           title="Something went wrong"
           message={getCrashMessage(error)}
-          onRetry={onRetry}
+          action={{ label: 'Try again', onPress: onRetry }}
         />
       </SafeAreaView>
     </ThemedView>

@@ -2,7 +2,13 @@ import { apiGet } from '@/services/apiClient';
 import { reportError } from '@/services/errorReporter';
 import { AppError } from '@/utils/errorUtils';
 
-import type { ProductSummary, ProductsPage, ProductsQuery } from './types';
+import type {
+  ProductDetails,
+  ProductReviewSummary,
+  ProductSummary,
+  ProductsPage,
+  ProductsQuery,
+} from './types';
 
 const DEFAULT_LIMIT = 20;
 
@@ -25,6 +31,17 @@ const asText = (value: unknown) =>
 
 const asNumber = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
+const asNonNegative = (value: unknown) => {
+  const number = asNumber(value);
+  return number !== undefined && number >= 0 ? number : undefined;
+};
+
+const asTextList = (value: unknown) =>
+  Array.isArray(value) ? value.map(asText).filter((item) => item !== undefined) : [];
+
+const asObject = (value: unknown) =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined;
 
 /**
  * Turns one raw product into what the list shows. Missing or malformed fields become
@@ -80,4 +97,74 @@ export async function fetchProducts(
   }
 
   return { products, total: data.total, nextSkip: skip + data.products.length };
+}
+
+function toReview(value: unknown): ProductReviewSummary | null {
+  const raw = asObject(value);
+  if (!raw) return null;
+  const rating = asNumber(raw.rating);
+  const review = {
+    rating: rating !== undefined && rating >= 0 && rating <= 5 ? rating : undefined,
+    comment: asText(raw.comment),
+    reviewerName: asText(raw.reviewerName),
+    date: asText(raw.date),
+  };
+  // A review with nothing to show is noise.
+  return review.comment || review.rating !== undefined ? review : null;
+}
+
+/** Turns a raw product into what the details screen shows; `null` if it has no id. */
+export function toProductDetails(value: unknown): ProductDetails | null {
+  const summary = toProductSummary(value);
+  if (!summary) return null;
+  const raw = value as Record<string, unknown>;
+
+  const dimensions = asObject(raw.dimensions);
+  const width = asNonNegative(dimensions?.width);
+  const height = asNonNegative(dimensions?.height);
+  const depth = asNonNegative(dimensions?.depth);
+  const discount = asNumber(raw.discountPercentage);
+
+  return {
+    ...summary,
+    discountPercentage:
+      discount !== undefined && discount > 0 && discount < 100 ? discount : undefined,
+    stock: asNonNegative(raw.stock),
+    availabilityStatus: asText(raw.availabilityStatus),
+    tags: asTextList(raw.tags),
+    images: asTextList(raw.images),
+    sku: asText(raw.sku),
+    weight: asNonNegative(raw.weight),
+    dimensions:
+      width !== undefined && height !== undefined && depth !== undefined
+        ? { width, height, depth }
+        : undefined,
+    warrantyInformation: asText(raw.warrantyInformation),
+    shippingInformation: asText(raw.shippingInformation),
+    returnPolicy: asText(raw.returnPolicy),
+    minimumOrderQuantity: asNonNegative(raw.minimumOrderQuantity),
+    reviews: (Array.isArray(raw.reviews) ? raw.reviews : [])
+      .map(toReview)
+      .filter((review) => review !== null),
+  };
+}
+
+export async function fetchProductDetails(
+  id: number,
+  signal?: AbortSignal,
+): Promise<ProductDetails> {
+  const data = await apiGet<unknown>(`/products/${id}`, { signal });
+  const product = toProductDetails(data);
+  if (!product) {
+    throw new AppError('parse', 'Product response has no id');
+  }
+  return product;
+}
+
+/** Product ids are positive integers; anything else in a link is rejected without a request. */
+export function parseProductId(param: string | string[] | undefined): number | null {
+  const value = Array.isArray(param) ? param[0] : param;
+  if (!value || !/^\d+$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }

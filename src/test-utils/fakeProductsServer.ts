@@ -130,7 +130,17 @@ export function installFakeProductsServer(options: FakeServerOptions) {
             reject(new TypeError('Network request failed'));
             return;
           }
-          const body = buildBody(new URL(input), requestIndex);
+          const url = new URL(input);
+          // `/products/<id>`: one product, or 404 like DummyJSON for unknown ids.
+          const single = url.pathname.match(/\/products\/(\d+)$/);
+          if (single) {
+            const id = Number(single[1]);
+            const found = id >= 1 && id <= total;
+            const body = found ? makeProduct(id, requestIndex) : { message: 'not found' };
+            resolve({ ok: found, status: found ? 200 : 404, json: async () => body } as Response);
+            return;
+          }
+          const body = buildBody(url, requestIndex);
           resolve({ ok: true, status: 200, json: async () => body } as Response);
         }, delay);
       }

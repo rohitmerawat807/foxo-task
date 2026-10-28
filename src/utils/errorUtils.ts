@@ -39,6 +39,9 @@ export function getErrorMessage(error: AppError): string {
     case 'timeout':
       return 'The request took too long. Please try again.';
     case 'http':
+      if (error.status === 404) {
+        return "We couldn't find what you were looking for.";
+      }
       return error.status !== undefined && error.status >= 500
         ? 'The server is having trouble right now. Please try again later.'
         : 'Something went wrong while loading data.';

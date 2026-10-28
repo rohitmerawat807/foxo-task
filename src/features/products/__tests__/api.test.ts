@@ -1,4 +1,4 @@
-import { toProductSummary } from '../api';
+import { parseProductId, toProductDetails, toProductSummary } from '../api';
 
 jest.mock('expo-network', () => ({ getNetworkStateAsync: jest.fn() }));
 
@@ -78,4 +78,82 @@ describe('toProductSummary', () => {
       }
     }
   });
+});
+
+describe('toProductDetails', () => {
+  it('keeps a product with only an id, with empty lists for collections', () => {
+    expect(toProductDetails({ id: 3 })).toMatchObject({
+      id: 3,
+      title: 'Untitled product',
+      tags: [],
+      images: [],
+      reviews: [],
+      dimensions: undefined,
+      discountPercentage: undefined,
+    });
+  });
+
+  it('cleans nested data: images, tags, dimensions and reviews', () => {
+    const product = toProductDetails({
+      id: 1,
+      images: ['a.png', '', 42, null, 'b.png'],
+      tags: ['beauty', '  ', 'mascara'],
+      dimensions: { width: 1, height: 2 }, // depth missing
+      discountPercentage: 150,
+      reviews: [
+        { rating: 5, comment: 'Great', reviewerName: 'Sam', date: '2025-01-01' },
+        { rating: 9, comment: 'Out-of-range rating dropped' },
+        {}, // nothing to show
+        'not a review',
+      ],
+    });
+    expect(product?.images).toEqual(['a.png', 'b.png']);
+    expect(product?.tags).toEqual(['beauty', 'mascara']);
+    expect(product?.dimensions).toBeUndefined();
+    expect(product?.discountPercentage).toBeUndefined();
+    expect(product?.reviews).toEqual([
+      { rating: 5, comment: 'Great', reviewerName: 'Sam', date: '2025-01-01' },
+      {
+        rating: undefined,
+        comment: 'Out-of-range rating dropped',
+        reviewerName: undefined,
+        date: undefined,
+      },
+    ]);
+  });
+
+  it('never throws on random input', () => {
+    const pick = () => GARBAGE[Math.floor(Math.random() * GARBAGE.length)];
+    for (let i = 0; i < 2_000; i++) {
+      const raw = {
+        id: i,
+        images: Math.random() < 0.5 ? [pick(), pick()] : pick(),
+        tags: Math.random() < 0.5 ? [pick()] : pick(),
+        dimensions: Math.random() < 0.5 ? { width: pick(), height: pick(), depth: pick() } : pick(),
+        reviews: Math.random() < 0.5 ? [{ rating: pick(), comment: pick() }, pick()] : pick(),
+        stock: pick(),
+        discountPercentage: pick(),
+      };
+      const product = toProductDetails(raw);
+      expect(Array.isArray(product?.images)).toBe(true);
+      expect(Array.isArray(product?.reviews)).toBe(true);
+    }
+  });
+});
+
+describe('parseProductId', () => {
+  it.each([
+    ['1', 1],
+    ['194', 194],
+    [['7', '8'], 7],
+  ])('accepts %p', (param, expected) => {
+    expect(parseProductId(param)).toBe(expected);
+  });
+
+  it.each([undefined, '', 'abc', '0', '-5', '1.5', '1e3', ' 1', '99999999999999999999'])(
+    'rejects %p',
+    (param) => {
+      expect(parseProductId(param)).toBeNull();
+    },
+  );
 });

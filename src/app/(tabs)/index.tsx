@@ -31,7 +31,12 @@ export default function HomeScreen() {
       case 'loading':
         return <LoadingState message={search ? 'Searching…' : 'Loading products…'} />;
       case 'error':
-        return <ErrorState message={getErrorMessage(state.error)} onRetry={retry} />;
+        return (
+          <ErrorState
+            message={getErrorMessage(state.error)}
+            action={{ label: 'Try again', onPress: retry }}
+          />
+        );
       case 'empty':
         return search ? (
           <EmptyState title="No results" message={`Nothing matches "${search}".`} />

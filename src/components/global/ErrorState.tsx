@@ -7,19 +7,19 @@ import { Spacing } from '@/constants/theme';
 type ErrorStateProps = {
   title?: string;
   message: string;
-  onRetry?: () => void;
+  action?: { label: string; onPress: () => void };
 };
 
-export function ErrorState({ title = 'Something went wrong', message, onRetry }: ErrorStateProps) {
+export function ErrorState({ title = 'Something went wrong', message, action }: ErrorStateProps) {
   return (
     <View style={styles.container} accessibilityRole="alert">
       <ThemedText type="smallBold">{title}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary" style={styles.message}>
         {message}
       </ThemedText>
-      {onRetry && (
+      {action && (
         <View style={styles.action}>
-          <Button onPress={onRetry} label="Try again" />
+          <Button onPress={action.onPress} label={action.label} />
         </View>
       )}
     </View>

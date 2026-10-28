@@ -67,6 +67,30 @@ export type ProductSummary = {
   thumbnail?: string;
 };
 
+export type ProductReviewSummary = {
+  rating?: number;
+  comment?: string;
+  reviewerName?: string;
+  date?: string;
+};
+
+/** Everything the details screen shows, cleaned up like `ProductSummary`. */
+export type ProductDetails = ProductSummary & {
+  discountPercentage?: number;
+  stock?: number;
+  availabilityStatus?: string;
+  tags: string[];
+  images: string[];
+  sku?: string;
+  weight?: number;
+  dimensions?: ProductDimensions;
+  warrantyInformation?: string;
+  shippingInformation?: string;
+  returnPolicy?: string;
+  minimumOrderQuantity?: number;
+  reviews: ProductReviewSummary[];
+};
+
 /** A cleaned-up page of products, ready for the UI. */
 export type ProductsPage = {
   products: ProductSummary[];
