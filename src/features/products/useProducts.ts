@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppError, toAppError } from '@/utils/errorUtils';
 
 import { fetchProducts } from './api';
-import type { Product } from './types';
+import type { ProductSummary } from './types';
 
 const PAGE_SIZE = 20;
 
@@ -14,13 +14,26 @@ export type ProductsState =
   | { status: 'loading' }
   | {
       status: 'success';
-      products: Product[];
+      products: ProductSummary[];
       total: number;
       nextSkip: number;
       loadMore: LoadMoreState;
     }
   | { status: 'empty' }
   | { status: 'error'; error: AppError };
+
+/** Appends `incoming`, skipping ids already in the list (duplicates would break list keys). */
+function appendUnique(existing: ProductSummary[], incoming: ProductSummary[]) {
+  const seen = new Set(existing.map((product) => product.id));
+  const result = [...existing];
+  for (const product of incoming) {
+    if (!seen.has(product.id)) {
+      seen.add(product.id);
+      result.push(product);
+    }
+  }
+  return result;
+}
 
 export function useProducts() {
   const [state, setState] = useState<ProductsState>({ status: 'loading' });
@@ -40,7 +53,13 @@ export function useProducts() {
         if (controller.signal.aborted) return;
         setState(
           products.length > 0
-            ? { status: 'success', products, total, nextSkip, loadMore: { status: 'idle' } }
+            ? {
+                status: 'success',
+                products: appendUnique([], products),
+                total,
+                nextSkip,
+                loadMore: { status: 'idle' },
+              }
             : { status: 'empty' },
         );
       })
@@ -70,7 +89,7 @@ export function useProducts() {
           prev.status === 'success'
             ? {
                 ...prev,
-                products: [...prev.products, ...products],
+                products: appendUnique(prev.products, products),
                 total,
                 nextSkip,
                 loadMore: { status: 'idle' },

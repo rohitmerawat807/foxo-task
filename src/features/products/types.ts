@@ -52,9 +52,24 @@ export type ProductsResponse = {
   limit: number;
 };
 
-/** A validated page of products, ready for the UI. */
+/**
+ * The fields the list shows, cleaned up from the raw API data. Only `id` and `title` are
+ * guaranteed; everything else may be missing and the UI must cope.
+ */
+export type ProductSummary = {
+  id: number;
+  title: string;
+  description?: string;
+  brand?: string;
+  category?: string;
+  price?: number;
+  rating?: number;
+  thumbnail?: string;
+};
+
+/** A cleaned-up page of products, ready for the UI. */
 export type ProductsPage = {
-  products: Product[];
+  products: ProductSummary[];
   total: number;
   /** Where the next page starts. Counts dropped (invalid) items too. */
   nextSkip: number;

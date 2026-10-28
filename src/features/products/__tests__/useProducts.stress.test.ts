@@ -162,7 +162,7 @@ describe('useProducts under stress', () => {
     expect(stats.aborted).toBe(1);
   });
 
-  it('skips corrupted products without breaking pagination', async () => {
+  it('keeps corrupted products, with fallbacks, without breaking pagination', async () => {
     const { stats } = installFakeProductsServer({
       total: 1000,
       corruptRate: 0.2,
@@ -174,10 +174,9 @@ describe('useProducts under stress', () => {
     const state = await loadEverything(result);
 
     expect(stats.corrupted).toBeGreaterThan(100);
-    expect(state.products).toHaveLength(1000 - stats.corrupted);
+    expect(state.products.map((p) => p.id)).toEqual(range(1, 1000));
     for (const product of state.products) {
-      expect(typeof product.title).toBe('string');
-      expect(typeof product.price).toBe('number');
+      expect(product.title).not.toBe('');
     }
     expect(state.nextSkip).toBe(1000);
   });

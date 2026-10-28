@@ -18,9 +18,9 @@ const API_OPTIONS: { value: ApiSimulation; label: string; description: string }[
   { value: 'server', label: 'Server error', description: 'The server responds with HTTP 500.' },
   { value: 'invalidJson', label: 'Invalid response', description: 'The body is not valid JSON.' },
   {
-    value: 'missingFields',
-    label: 'Missing fields',
-    description: 'Half the products have no title or price.',
+    value: 'messyData',
+    label: 'Messy data',
+    description: 'Missing fields, wrong types, long text, broken images, duplicate ids.',
   },
   { value: 'emptyList', label: 'Empty list', description: 'The server returns no products.' },
 ];

@@ -3,12 +3,12 @@ import { ListFooter } from '@/components/global/ListFooter';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { getErrorMessage } from '@/utils/errorUtils';
-import type { Product } from '../types';
+import type { ProductSummary } from '../types';
 import type { LoadMoreState } from '../useProducts';
 import { ProductRow } from './ProductRow';
 
 type ProductListProps = {
-  products: Product[];
+  products: ProductSummary[];
   hasMore: boolean;
   loadMore: LoadMoreState;
   onEndReached: () => void;
@@ -33,11 +33,18 @@ export function ProductList({
   return (
     <FlatList
       data={products}
-      keyExtractor={(item: Product) => String(item.id)}
+      keyExtractor={(item: ProductSummary) => String(item.id)}
       renderItem={renderItem}
       ItemSeparatorComponent={Separator}
       onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
+      // Start the next page a full screen early so fast scrolling rarely hits the bottom.
+      onEndReachedThreshold={1}
+      // Rows have different heights (wrapped titles, optional description), so no
+      // `getItemLayout`. Instead keep the rendered window small: fewer mounted rows means fewer
+      // decoded images in memory on long lists.
+      initialNumToRender={8}
+      maxToRenderPerBatch={8}
+      windowSize={7}
       // Reloads from page 1; the screen shows its own loading state meanwhile.
       refreshing={false}
       onRefresh={onRefresh}
@@ -66,7 +73,7 @@ function Footer({ hasMore, loadMore, onRetry }: FooterProps) {
   return hasMore ? null : <ListFooter status="end" message="You've seen all products" />;
 }
 
-const renderItem = ({ item }: { item: Product }) => <ProductRow product={item} />;
+const renderItem = ({ item }: { item: ProductSummary }) => <ProductRow product={item} />;
 
 function Separator() {
   return <ThemedView type="backgroundElement" style={styles.separator} />;
