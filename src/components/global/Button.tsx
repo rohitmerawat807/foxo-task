@@ -4,12 +4,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 
-type RetryButtonProps = {
+type ButtonProps = {
   onPress: () => void;
-  label?: string;
+  label: string;
 };
 
-export function RetryButton({ onPress, label = 'Try again' }: RetryButtonProps) {
+export function Button({ onPress, label }: ButtonProps) {
   return (
     <Pressable
       onPress={onPress}

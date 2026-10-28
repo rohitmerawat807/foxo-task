@@ -1,7 +1,10 @@
+import { getNetworkStateAsync } from 'expo-network';
+
+import { fetchWithSimulation } from '@/services/errorSimulator';
 import { AppError } from '@/utils/errorUtils';
 
 const BASE_URL = 'https://dummyjson.com';
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 type QueryParams = Record<string, string | number | boolean | undefined>;
 
@@ -18,6 +21,16 @@ function buildUrl(path: string, query?: QueryParams): string {
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
   return `${BASE_URL}${path}${queryString ? `?${queryString}` : ''}`;
+}
+
+/** Tells "no connection on the device" apart from "server unreachable". */
+async function isDeviceOffline(): Promise<boolean> {
+  try {
+    const { isConnected, isInternetReachable } = await getNetworkStateAsync();
+    return isConnected === false || isInternetReachable === false;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -40,7 +53,7 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
   try {
     let response: Response;
     try {
-      response = await fetch(buildUrl(path, query), {
+      response = await fetchWithSimulation(buildUrl(path, query), {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: controller.signal,
@@ -51,6 +64,9 @@ export async function apiGet<T>(path: string, options: RequestOptions = {}): Pro
       }
       if (controller.signal.aborted) {
         throw new AppError('cancelled', 'Request was cancelled', { cause: error });
+      }
+      if (await isDeviceOffline()) {
+        throw new AppError('offline', 'Device is offline', { cause: error });
       }
       throw new AppError('network', 'Network request failed', { cause: error });
     }

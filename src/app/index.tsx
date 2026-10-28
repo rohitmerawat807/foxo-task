@@ -4,12 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/global/EmptyState';
 import { ErrorState } from '@/components/global/ErrorState';
 import { LoadingState } from '@/components/global/LoadingState';
+import { OfflineBanner } from '@/components/global/OfflineBanner';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { ProductList } from '@/features/products/components/ProductList';
 import { useProducts } from '@/features/products/useProducts';
 import { getErrorMessage } from '@/utils/errorUtils';
+
+// Keeps the tab bar usable if this screen crashes while rendering.
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/global/RouteErrorBoundary';
 
 export default function HomeScreen() {
   const { state, loadMore, retryLoadMore, retry } = useProducts();
@@ -22,16 +26,21 @@ export default function HomeScreen() {
         return <ErrorState message={getErrorMessage(state.error)} onRetry={retry} />;
       case 'empty':
         return (
-          <EmptyState title="No products found" message="Check back later for new arrivals." />
+          <EmptyState
+            title="No products found"
+            message="Check back later for new arrivals."
+            onRefresh={retry}
+          />
         );
       case 'success':
         return (
           <ProductList
             products={state.products}
-            hasMore={state.products.length < state.total}
+            hasMore={state.nextSkip < state.total}
             loadMore={state.loadMore}
             onEndReached={loadMore}
             onRetryLoadMore={retryLoadMore}
+            onRefresh={retry}
           />
         );
     }
@@ -49,6 +58,7 @@ export default function HomeScreen() {
           )}
         </ThemedView>
 
+        <OfflineBanner />
         {renderContent()}
       </SafeAreaView>
     </ThemedView>

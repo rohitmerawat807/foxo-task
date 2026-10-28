@@ -1,6 +1,6 @@
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { RetryButton } from '@/components/global/RetryButton';
+import { Button } from '@/components/global/Button';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -27,7 +27,7 @@ export function ListFooter(props: ListFooterProps) {
           <ThemedText type="small" themeColor="textSecondary" style={styles.message}>
             {props.message}
           </ThemedText>
-          <RetryButton onPress={props.onRetry} />
+          <Button onPress={props.onRetry} label="Try again" />
         </View>
       );
     case 'end':

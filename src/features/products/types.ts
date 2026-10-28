@@ -52,6 +52,14 @@ export type ProductsResponse = {
   limit: number;
 };
 
+/** A validated page of products, ready for the UI. */
+export type ProductsPage = {
+  products: Product[];
+  total: number;
+  /** Where the next page starts. Counts dropped (invalid) items too. */
+  nextSkip: number;
+};
+
 export type ProductsQuery = {
   limit?: number;
   skip?: number;

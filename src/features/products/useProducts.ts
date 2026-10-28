@@ -12,7 +12,13 @@ export type LoadMoreState =
 
 export type ProductsState =
   | { status: 'loading' }
-  | { status: 'success'; products: Product[]; total: number; loadMore: LoadMoreState }
+  | {
+      status: 'success';
+      products: Product[];
+      total: number;
+      nextSkip: number;
+      loadMore: LoadMoreState;
+    }
   | { status: 'empty' }
   | { status: 'error'; error: AppError };
 
@@ -28,10 +34,10 @@ export function useProducts() {
     const controller = new AbortController();
 
     fetchProducts({ limit: PAGE_SIZE, skip: 0 }, controller.signal)
-      .then(({ products, total }) => {
+      .then(({ products, total, nextSkip }) => {
         setState(
           products.length > 0
-            ? { status: 'success', products, total, loadMore: { status: 'idle' } }
+            ? { status: 'success', products, total, nextSkip, loadMore: { status: 'idle' } }
             : { status: 'empty' },
         );
       })
@@ -49,21 +55,22 @@ export function useProducts() {
   useEffect(() => () => loadMoreRequest.current?.abort(), []);
 
   const fetchNextPage = () => {
-    if (state.status !== 'success' || state.products.length >= state.total) return;
+    if (state.status !== 'success' || state.nextSkip >= state.total) return;
     if (loadMoreRequest.current) return;
 
     const controller = new AbortController();
     loadMoreRequest.current = controller;
     setState({ ...state, loadMore: { status: 'loading' } });
 
-    fetchProducts({ limit: PAGE_SIZE, skip: state.products.length }, controller.signal)
-      .then(({ products, total }) => {
+    fetchProducts({ limit: PAGE_SIZE, skip: state.nextSkip }, controller.signal)
+      .then(({ products, total, nextSkip }) => {
         setState((prev) =>
           prev.status === 'success'
             ? {
                 ...prev,
                 products: [...prev.products, ...products],
                 total,
+                nextSkip,
                 loadMore: { status: 'idle' },
               }
             : prev,

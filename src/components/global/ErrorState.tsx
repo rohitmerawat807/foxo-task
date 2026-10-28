@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { RetryButton } from '@/components/global/RetryButton';
+import { Button } from '@/components/global/Button';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 
@@ -19,7 +19,7 @@ export function ErrorState({ title = 'Something went wrong', message, onRetry }:
       </ThemedText>
       {onRetry && (
         <View style={styles.action}>
-          <RetryButton onPress={onRetry} />
+          <Button onPress={onRetry} label="Try again" />
         </View>
       )}
     </View>

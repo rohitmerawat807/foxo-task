@@ -1,4 +1,5 @@
-export type AppErrorKind = 'network' | 'timeout' | 'http' | 'parse' | 'cancelled' | 'unknown';
+export type AppErrorKind =
+  'offline' | 'network' | 'timeout' | 'http' | 'parse' | 'cancelled' | 'unknown';
 
 /**
  * Normalized error shape for everything that can go wrong while talking to the API,
@@ -31,8 +32,10 @@ export function toAppError(error: unknown): AppError {
 /** User-facing copy for an error. Never surfaces raw technical messages. */
 export function getErrorMessage(error: AppError): string {
   switch (error.kind) {
+    case 'offline':
+      return "You're offline. Connect to the internet and try again.";
     case 'network':
-      return 'Unable to connect. Check your internet connection and try again.';
+      return "Couldn't reach the server. Please try again.";
     case 'timeout':
       return 'The request took too long. Please try again.';
     case 'http':
@@ -46,4 +49,12 @@ export function getErrorMessage(error: AppError): string {
     default:
       return 'Something went wrong. Please try again.';
   }
+}
+
+/** Message for an unexpected crash: details in development, plain wording for users. */
+export function getCrashMessage(error: unknown): string {
+  if (__DEV__ && error instanceof Error) {
+    return error.message;
+  }
+  return 'An unexpected error occurred. Please try again.';
 }

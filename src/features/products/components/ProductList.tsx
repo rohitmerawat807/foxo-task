@@ -13,6 +13,7 @@ type ProductListProps = {
   loadMore: LoadMoreState;
   onEndReached: () => void;
   onRetryLoadMore: () => void;
+  onRefresh: () => void;
 };
 
 type FooterProps = {
@@ -27,6 +28,7 @@ export function ProductList({
   loadMore,
   onEndReached,
   onRetryLoadMore,
+  onRefresh,
 }: ProductListProps) {
   return (
     <FlatList
@@ -36,6 +38,9 @@ export function ProductList({
       ItemSeparatorComponent={Separator}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
+      // Reloads from page 1; the screen shows its own loading state meanwhile.
+      refreshing={false}
+      onRefresh={onRefresh}
       ListFooterComponent={
         <Footer hasMore={hasMore} loadMore={loadMore} onRetry={onRetryLoadMore} />
       }
